@@ -22,7 +22,19 @@ from deep_research_from_scratch.prompts import summarize_webpage_prompt
 
 def get_today_str() -> str:
     """Get current date in a human-readable format."""
-    return datetime.now().strftime("%a %b %-d, %Y")
+     # 1. Use the standard %d for the day.
+    formatted_date = datetime.now().strftime("%a %b %d, %Y")
+
+    # 2. Find the start of the day number (usually after the month abbreviation)
+    # This works for "MMM 0X" or "MMM 1X"
+
+    # Check if the day starts with '0' (e.g., "Oct 02")
+    # Using replace is often the simplest way to handle this:
+    if " 0" in formatted_date:
+        return formatted_date.replace(" 0", " ")
+
+    # If no leading zero, return as is.
+    return formatted_date
 
 def get_current_dir() -> Path:
     """Get the current directory of the module.
@@ -75,6 +87,8 @@ def tavily_search_multiple(
 
     return search_docs
 
+import re
+
 def summarize_webpage_content(webpage_content: str) -> str:
     """Summarize webpage content using the configured summarization model.
 
@@ -88,12 +102,16 @@ def summarize_webpage_content(webpage_content: str) -> str:
         # Set up structured output model for summarization
         structured_model = summarization_model.with_structured_output(Summary)
 
+        print("Webpage content length:", len(webpage_content))
+
+        system_prompt = summarize_webpage_prompt.format(
+            webpage_content=webpage_content,
+            date=get_today_str()
+        )
+
         # Generate summary
         summary = structured_model.invoke([
-            HumanMessage(content=summarize_webpage_prompt.format(
-                webpage_content=webpage_content, 
-                date=get_today_str()
-            ))
+            HumanMessage(content=system_prompt)
         ])
 
         # Format summary with clear structure
